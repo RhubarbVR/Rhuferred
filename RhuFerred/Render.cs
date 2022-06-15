@@ -12,15 +12,7 @@ namespace RhuFerred
 	{
 		public RhuWindow FirstWindow => Windows.Count == 0 ? null : Windows[0];
 
-		public GraphicsDeviceOptions GraphicsDeviceOptions
-		{
-			get {
-				return new GraphicsDeviceOptions {
-					PreferStandardClipSpaceYDirection = true,
-					PreferDepthRangeZeroToOne = true
-				};
-			}
-		}
+		public GraphicsDeviceOptions GraphicsDeviceOptions => new(false, null, false, ResourceBindingModel.Improved, true, true, true);
 
 		public GraphicsBackend? PreferredGraphicsBackend { get; private set; }
 		public readonly SafeHashSet<Camera> Cameras = new();
@@ -134,7 +126,9 @@ namespace RhuFerred
 		public RhuShader LoadShader(RhuRawShaderData RhubarbShaderCode) {
 			return new RhuShader(this, RhubarbShaderCode);
 		}
-
+		public RhuMaterial NewMaterial(RhuShader shader) {
+			return new RhuMaterial(this, shader);
+		}
 		private void Init() {
 			Logger.Info($"DeviceName:{MainGraphicsDevice.DeviceName} Backend:{MainGraphicsDevice.BackendType} ApiVersion:{MainGraphicsDevice.ApiVersion}");
 			BankShader = LoadShader(ShaderCode.BLANKSHADER);

@@ -12,6 +12,9 @@ namespace RhuFerred.Tests
 		public const string TEST_CODE =
 @"
 Shader   ""This is a test shader""          {
+	Options{
+		DeferredKey(""Standard"")
+	}
 	Uniforms {
 		_Textue(""This Is Main Texture"",texture2d) = ""white"";
 		_Color(""Color"",ColorRGB) = (1,1,1)
@@ -39,13 +42,11 @@ Uniforms{
 	{The Par{{}}seData}
 
 	MainVertShaderCode {The{} ParseData 10}
-
-	MainGeometryShaderCode
-	{The Parse}
 }
 ";
 
 		private void TestUniforms(RhuRawShaderData rhuRawShaderData) {
+			Assert.AreEqual("Standard", rhuRawShaderData.DeferedKey);
 			Assert.AreEqual(3, rhuRawShaderData.shaderUniforms.Length);
 			var shaderUniform = new ShaderUniform[] {
 				new ShaderUniform {
@@ -96,6 +97,9 @@ Uniforms{
 			var newShaderCode =
 @"
 Shader""This is a test shader""{
+	Options{
+		DeferredKey(""Standard"")
+	}
 	Uniforms {
 		_Textue(""This Is Main Texture"",texture2d) = ""white""
 		_Color(""Color"",ColorRGB) = (1,1,1)
@@ -106,9 +110,6 @@ Shader""This is a test shader""{
 
 	MainVertShaderCode 
 	{The{} ParseData 10}
-
-	MainGeometryShaderCode
-	{The Parse}
 }
 ";
 			var shaderData = RhuShaderParser.ParseShaderCode(newShaderCode);

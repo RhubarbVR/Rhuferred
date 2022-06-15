@@ -81,6 +81,7 @@ void main()
 
 	public class RhuShader : IDisposable
 	{
+
 		public bool LoadedShader { get; private set; }
 
 		public string ShaderName { get; private set; }
@@ -128,6 +129,11 @@ void main()
 				Encoding.UTF8.GetBytes(ShadowFragShaderCode),
 				"main");
 			ShadowShaders = Renderer.MainGraphicsDevice.ResourceFactory.CreateFromSpirv(mainVertexShaderDesc, mainFragmentShaderDesc);
+
+			for (var i = 0; i < rhuRawShaderData.shaderUniforms.Length; i++) {
+				var uniform = rhuRawShaderData.shaderUniforms[i];
+			
+			}
 			LoadedShader = true;
 		}
 

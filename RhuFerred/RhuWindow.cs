@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Text;
 
@@ -186,15 +187,15 @@ void main()
 				BlendState = BlendStateDescription.SingleOverrideBlend,
 
 				DepthStencilState = new DepthStencilStateDescription(
-				depthTestEnabled: true,
-				depthWriteEnabled: true,
-				comparisonKind: ComparisonKind.LessEqual),
+				depthTestEnabled: false,
+				depthWriteEnabled: false,
+				comparisonKind: ComparisonKind.Always),
 
 				RasterizerState = new RasterizerStateDescription(
-				cullMode: FaceCullMode.Back,
+				cullMode: FaceCullMode.None,
 				fillMode: PolygonFillMode.Solid,
 				frontFace: FrontFace.Clockwise,
-				depthClipEnabled: true,
+				depthClipEnabled: false,
 				scissorTestEnabled: false),
 
 				PrimitiveTopology = PrimitiveTopology.TriangleStrip,
@@ -216,10 +217,13 @@ void main()
 		public void UpdateInput() {
 			Snapshot = Sdl2Window.PumpEvents();
 			if (WindowWasResized) {
+				GraphicsDevice.ResizeMainWindow((uint)Sdl2Window.Width, (uint)Sdl2Window.Height);
 				Resize?.Invoke((uint)Sdl2Window.Width, (uint)Sdl2Window.Height);
 				WindowWasResized = false;
 			}
 		}
+
+		public RgbaFloat ClearColor = RgbaFloat.Green;
 
 		public void Update() {
 			if (!Sdl2Window.Exists) {
@@ -227,7 +231,9 @@ void main()
 			}
 			_commandList.Begin();
 			_commandList.SetFramebuffer(GraphicsDevice.SwapchainFramebuffer);
-			if(!(Texture is null || _rs is null)) {
+			_commandList.ClearColorTarget(0, ClearColor);
+			_commandList.SetViewport(0,new Viewport { Height = Sdl2Window.Height, Width = Sdl2Window.Width });
+			if (!(Texture is null || _rs is null)) {
 				if (Texture.IsDisposed) {
 					return;
 				}

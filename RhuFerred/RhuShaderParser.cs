@@ -76,6 +76,9 @@ namespace RhuFerred
 		}
 
 		public static string[] StringSplit(string code) {
+			if (code == null) {
+				return Array.Empty<string>();
+			}
 			var tempNewCode = code.Replace('\r', ';').Replace('\t', ';').Replace('\n',';');
 			var strings = tempNewCode.Split(';', StringSplitOptions.RemoveEmptyEntries);
 			var newStrings = new string[strings.Length];
@@ -104,6 +107,21 @@ namespace RhuFerred
 			var shaderdisplayName = code.Substring(startOfNameShader, endOfNameShader - startOfNameShader);
 			code = RemoveFirstInClapsing(code);
 			codeLower = RemoveFirstInClapsing(codeLower);
+			var Options = StringSplit(GetClapsing("Options", codeLower, code));
+			var defferedKey = "Standard";
+			for (var i = 0; i < Options.Length; i++) {
+				try {
+					var optionLower = Options[i].ToLower();
+					var startOfOption = optionLower.IndexOf('"');
+					var endOfOption = optionLower.IndexOf('"', startOfOption + 1);
+					startOfOption++;
+					var opt = Options[i].Substring(startOfOption, endOfOption - startOfOption);
+					if (optionLower.StartsWith("deferredkey")) {
+						defferedKey = opt;
+					}
+				}
+				catch { }
+			}
 			var Uniforms = StringSplit(GetClapsing("Uniforms", codeLower, code));
 			var MainFragShaderCode = GetClapsing("MainFragShaderCode", codeLower, code);
 			var MainVertShaderCode = GetClapsing("MainVertShaderCode", codeLower, code);
@@ -138,6 +156,7 @@ namespace RhuFerred
 				MainVertShaderCode = MainVertShaderCode,
 				ShadowFragShaderCode = ShadowFragShaderCode,
 				ShadowVertShaderCode = ShadowVertShaderCode,
+				DeferedKey = defferedKey
 			};
 			return newSaderData;
 		}

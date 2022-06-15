@@ -77,6 +77,11 @@ namespace RhuFerred
 
 	public struct RhuRawShaderData
 	{
+		/// <summary>
+		/// Key to Shader to use of Deffered Fianl Pass
+		/// </summary>
+		public string DeferedKey;
+
 		public string ShaderName;
 
 		public ShaderUniform[] shaderUniforms;
