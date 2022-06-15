@@ -10,16 +10,50 @@ namespace RhuFerred
 {
 	public class Renderer : IDisposable
 	{
-		public SafeHashSet<Camera> Cameras = new();
+		public RhuWindow FirstWindow => Windows.Count == 0 ? null : Windows[0];
 
+		public GraphicsDeviceOptions GraphicsDeviceOptions
+		{
+			get {
+				return new GraphicsDeviceOptions {
+					PreferStandardClipSpaceYDirection = true,
+					PreferDepthRangeZeroToOne = true
+				};
+			}
+		}
+
+		public GraphicsBackend? PreferredGraphicsBackend { get; private set; }
+		public readonly SafeHashSet<Camera> Cameras = new();
+		public readonly SafeHashSet<RenderedMesh> RenderedMeshes = new();
+		public readonly SafeHashSet<Light> Lights = new();
+		
 		public ILogger Logger { get; private set; }
-		public Renderer(ILogger logger = null) {
+		public Renderer(GraphicsBackend? preferredGraphicsBackend = null, ILogger logger = null) {
+			PreferredGraphicsBackend = preferredGraphicsBackend;
 			Logger = logger ?? new BasicLogger();
 		}
 
-		public GraphicsDevice GraphicsDevice { get; private set; }
+		public GraphicsDevice MainGraphicsDevice { get; internal set; }
 
-		public Sdl2Window MainWindow { get; private set; }
+		public readonly List<RhuWindow> Windows = new();
+
+		public RhuWindow CreateNewWindow(string windowName = "RhuFerred Window", int WindowHeight = 540, int WindowWidth = 960, int x = 100, int y = 100) {
+			var window = new RhuWindow(this);
+			window.InitWindow(windowName, WindowHeight, WindowWidth, x, y);
+			Windows.Add(window);
+			return window;
+		}
+
+		public Camera CreateCamera(uint width = 960,uint height = 540) {
+			return new Camera(this, width, height);
+		}
+
+		public RenderedMesh AttachMeshRender(RhuMesh rhuMesh, params RhuMaterial[] mits) {
+			var rMesh = new RenderedMesh(this);
+			rMesh.UpdateMesh(rhuMesh);
+			rMesh.UpdateMaterials(mits);
+			return rMesh;
+		}
 
 		public bool IsRunning = true;
 
@@ -27,15 +61,29 @@ namespace RhuFerred
 
 		public double DeltaTime { get; private set; }
 
+		public double FPS => 1000 / DeltaTime;
+
 		public bool Step(Action value = null) {
 			DeltaTime = _stopwatch.Elapsed.TotalMilliseconds;
 			_stopwatch.Restart();
-			MainWindow.PumpEvents();
-			if (!MainWindow.Exists) {
+			for (var i = Windows.Count - 1; i >= 0; i--) {
+				var item = Windows[i];
+				if (!item.Sdl2Window.Exists) {
+					Windows.Remove(item);
+					item.Dispose();
+				}
+			}
+			foreach (var item in Windows) {
+				item.UpdateInput();
+			}
+			if (Windows.Count <= 0) {
 				Exit();
 			}
-			Cameras.ForEach((cam) => cam.Render());
 			value?.Invoke();
+			Cameras.ForEach((cam) => cam.Render());
+			foreach (var item in Windows) {
+				item.Update();
+			}
 			return IsRunning;
 		}
 
@@ -43,35 +91,13 @@ namespace RhuFerred
 			IsRunning = false;
 		}
 
-		public static Sdl2Window CreateBasicWindow(string windowName = "RhuFerred Window") {
-			var windowCI = new WindowCreateInfo() {
-				WindowHeight = 540,
-				WindowWidth = 960,
-				X = 100,
-				Y = 100,
-				WindowTitle = windowName
-			};
-			return VeldridStartup.CreateWindow(ref windowCI);
-		}
-
-		public void Init(Sdl2Window window, GraphicsBackend? graphicsBackend = null) {
-			var options = new GraphicsDeviceOptions {
-				PreferStandardClipSpaceYDirection = true,
-				PreferDepthRangeZeroToOne = true
-			};
-			MainWindow = window;
-			GraphicsDevice = graphicsBackend is null
-				? VeldridStartup.CreateGraphicsDevice(window, options)
-				: VeldridStartup.CreateGraphicsDevice(window, options, graphicsBackend ?? GraphicsBackend.Vulkan);
+		public void Init(RhuWindow window) {
+			MainGraphicsDevice = window.GraphicsDevice;
 			Init();
 		}
 
-		public void Init(SwapchainDescription swapchainDescription, GraphicsBackend? graphicsBackend = null) {
-			var options = new GraphicsDeviceOptions {
-				PreferStandardClipSpaceYDirection = true,
-				PreferDepthRangeZeroToOne = true
-			};
-			var backend = graphicsBackend ?? GraphicsBackend.Vulkan;
+		public void InitForMobile(SwapchainDescription swapchainDescription) {
+			var backend = PreferredGraphicsBackend ?? GraphicsBackend.Vulkan;
 			if (GraphicsDevice.IsBackendSupported(backend)) {
 			}
 			else {
@@ -87,27 +113,42 @@ namespace RhuFerred
 																					? GraphicsBackend.OpenGL
 																					: throw new Exception("No compatible backend found");
 			}
-			GraphicsDevice = backend switch {
-				GraphicsBackend.Direct3D11 => GraphicsDevice.CreateD3D11(options, swapchainDescription),
-				GraphicsBackend.Vulkan => GraphicsDevice.CreateVulkan(options, swapchainDescription),
+			MainGraphicsDevice = backend switch {
+				GraphicsBackend.Direct3D11 => GraphicsDevice.CreateD3D11(GraphicsDeviceOptions, swapchainDescription),
+				GraphicsBackend.Vulkan => GraphicsDevice.CreateVulkan(GraphicsDeviceOptions, swapchainDescription),
 				GraphicsBackend.OpenGL => throw new Exception("Not possible"),
-				GraphicsBackend.Metal => GraphicsDevice.CreateMetal(options, swapchainDescription),
-				GraphicsBackend.OpenGLES => GraphicsDevice.CreateOpenGLES(options, swapchainDescription),
+				GraphicsBackend.Metal => GraphicsDevice.CreateMetal(GraphicsDeviceOptions, swapchainDescription),
+				GraphicsBackend.OpenGLES => GraphicsDevice.CreateOpenGLES(GraphicsDeviceOptions, swapchainDescription),
 				_ => throw new Exception("Not possible"),
 			};
 			Init();
 		}
 
+		public RhuShader BankShader { get; private set; }
+		public RhuShader MainShader { get; private set; }
+
+		public RhuShader LoadShader(string RhubarbShaderCode) {
+			return LoadShader(RhuShaderParser.ParseShaderCode(RhubarbShaderCode));
+		}
+
+		public RhuShader LoadShader(RhuRawShaderData RhubarbShaderCode) {
+			return new RhuShader(this, RhubarbShaderCode);
+		}
+
 		private void Init() {
-			Logger.Info($"DeviceName:{GraphicsDevice.DeviceName} Backend:{GraphicsDevice.BackendType} ApiVersion:{GraphicsDevice.ApiVersion}");
+			Logger.Info($"DeviceName:{MainGraphicsDevice.DeviceName} Backend:{MainGraphicsDevice.BackendType} ApiVersion:{MainGraphicsDevice.ApiVersion}");
+			BankShader = LoadShader(ShaderCode.BLANKSHADER);
+			MainShader = LoadShader(ShaderCode.MAINSHADER);
 		}
 
 		public void Dispose() {
 			foreach (var item in Cameras.values) {
 				item.Dispose();
 			}
-			GraphicsDevice?.Dispose();
-			GraphicsDevice = null;
+			foreach (var item in Windows) {
+				item.Dispose();
+			}
+			MainGraphicsDevice = null;
 		}
 	}
 }
