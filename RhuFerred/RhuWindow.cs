@@ -91,16 +91,24 @@ void main()
 }";
 
 		private CommandList _commandList;
-		public Texture Texture { get; private set; }
+		public RhuTexture Texture { get; private set; }
 
-		public void UpdateTexture(Texture newTexture) {
-			Texture = newTexture;
+		public void LoadTexture(RhuTexture texture) {
+			if(Texture is not null) {
+				Texture.TextureReloadEvent -= LoadTextureRes;
+			}
+			Texture = texture;
+			Texture.TextureReloadEvent += LoadTextureRes;
+			LoadTextureRes();
+		}
+
+		private void LoadTextureRes() {
 			_rs?.Dispose();
-			if (newTexture is null) {
+			if (Texture?.LoadedTexture is null) {
 				_rs = null;
 				return;
 			}
-			_rs = GraphicsDevice.ResourceFactory.CreateResourceSet(new ResourceSetDescription(_rl, newTexture, GraphicsDevice.Aniso4xSampler));
+			_rs = GraphicsDevice.ResourceFactory.CreateResourceSet(new ResourceSetDescription(_rl, Texture.LoadedTexture, GraphicsDevice.Aniso4xSampler));
 		}
 
 		public Sdl2Window Sdl2Window { get; private set; }
@@ -121,15 +129,13 @@ void main()
 
 		public void TargetCamera(Camera camera) {
 			ResizeCameraWithWindow(camera);
-			UpdateTexture(camera.MainTexture);
-			camera.FinalTextureChange += UpdateTexture;
+			LoadTexture(camera.MainTexture);
 			camera.Resize((uint)Sdl2Window.Width, (uint)Sdl2Window.Height);
 		}
 
 		public void RemoveTargetCamera(Camera camera) {
 			RemoveResizeCameraWithWindow(camera);
-			UpdateTexture(null);
-			camera.FinalTextureChange -= UpdateTexture;
+			LoadTexture(null);
 		}
 
 		public void ResizeCameraWithWindow(Camera cam) {
@@ -213,6 +219,7 @@ void main()
 
 		public InputSnapshot Snapshot { get; private set; }
 		public bool WindowWasResized { get; private set; }
+		private bool ViewPortUpdate { get; set; }
 
 		public void UpdateInput() {
 			Snapshot = Sdl2Window.PumpEvents();
@@ -220,6 +227,7 @@ void main()
 				GraphicsDevice.ResizeMainWindow((uint)Sdl2Window.Width, (uint)Sdl2Window.Height);
 				Resize?.Invoke((uint)Sdl2Window.Width, (uint)Sdl2Window.Height);
 				WindowWasResized = false;
+				ViewPortUpdate = true;
 			}
 		}
 
@@ -232,11 +240,11 @@ void main()
 			_commandList.Begin();
 			_commandList.SetFramebuffer(GraphicsDevice.SwapchainFramebuffer);
 			_commandList.ClearColorTarget(0, ClearColor);
-			_commandList.SetViewport(0,new Viewport { Height = Sdl2Window.Height, Width = Sdl2Window.Width });
-			if (!(Texture is null || _rs is null)) {
-				if (Texture.IsDisposed) {
-					return;
-				}
+			if (ViewPortUpdate) {
+				_commandList.SetViewport(0, new Viewport { Height = Sdl2Window.Height, Width = Sdl2Window.Width });
+				ViewPortUpdate = false;
+			}
+			if (!(Texture?.IsDisposed ?? true) || _rs is null) {
 				_commandList.SetVertexBuffer(0, _vertexBuffer);
 				_commandList.SetIndexBuffer(_indexBuffer, IndexFormat.UInt16);
 				_commandList.SetPipeline(_pipeline);

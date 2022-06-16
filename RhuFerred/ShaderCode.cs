@@ -17,6 +17,7 @@ shader""Blank Shader""{
 @"
 shader""Main Shader""{
 	uniforms{
+		_MainTexture(""Main Color"",texture2d) = ""White"";
 	}
 }
 ";

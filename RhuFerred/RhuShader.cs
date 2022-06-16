@@ -14,34 +14,102 @@ namespace RhuFerred
 #version 450
 
 layout(location = 0) in vec4 In_Color;
+layout(location = 1) in vec3 In_Tangent;
+layout(location = 2) in vec3 In_Normal;
+layout(location = 3) in vec2 In_UV1;
+layout(location = 4) in vec2 In_UV2;
+layout(location = 5) in vec2 In_UV3;
+layout(location = 6) in vec2 In_UV4;
+layout(location = 7) in flat uint In_MaterialIndex;
 
-layout(location = 0) out vec4 Out_AlbdoSpec;
-layout(location = 1) out vec4 Out_Normals;
-layout(location = 2) out vec4 Out_Positions;
-layout(location = 3) out vec4 Out_Color;
+layout(location = 0) out vec4 Out_Albdo;
+layout(location = 1) out vec4 Out_Specular_Metallic;
+layout(location = 2) out vec4 Out_Emission_AmbientOcclusion;
+layout(location = 3) out vec4 Out_Normals_Roughness;
+layout(location = 4) out vec4 Out_SubSurfaces_DecalStencil;
+layout(location = 5) out vec4 Out_Positions_UserData;
 
 
 ";
-		public const string ADDEDCODE_MAIN_VERT_SHADER_CODE =
+		public const string VERTDATA =
 @"
-#version 450
+layout(location = 0) in vec3 Position;
+layout(location = 1) in vec4 Color;
+layout(location = 2) in vec3 Tangent;
+layout(location = 3) in vec3 Normal;
+layout(location = 4) in vec2 UV1;
+layout(location = 5) in vec2 UV2;
+layout(location = 6) in vec2 UV3;
+layout(location = 7) in vec2 UV4;
+layout(location = 8) in ivec4 Bones;
+";
+		public const string VERTADDEDCODE =
+@"
 
-layout(location = 0) in vec3 In_Position;
-layout(location = 1) in vec4 In_Color;
+layout(set = 0, binding = 0) uniform WorldData
+{
+	mat4 Projection;
+    mat4 View;
+    mat4 World;
+	uint MaterialIndex;
+};
+
 layout(location = 0) out vec4 Out_Color;
+layout(location = 1) out vec3 Out_Tangent;
+layout(location = 2) out vec3 Out_Normal;
+layout(location = 3) out vec2 Out_UV1;
+layout(location = 4) out vec2 Out_UV2;
+layout(location = 5) out vec2 Out_UV3;
+layout(location = 6) out vec2 Out_UV4;
+layout(location = 7) out flat uint Out_MaterialIndex;
 
+vec4 GetVertexPos() {
+	vec4 worldPosition = World * vec4(Position, 1);
+    vec4 viewPosition = View * worldPosition;
+    return Projection * viewPosition;
+}
+
+void PassThrough() {
+	Out_Color = Color;
+	Out_Tangent = Tangent;
+	Out_Normal = Normal;
+	Out_UV1 = UV1;
+	Out_UV2 = UV2;
+	Out_UV3 = UV3;
+	Out_UV4 = UV4;
+	Out_MaterialIndex = MaterialIndex;
+}
+
+";
+
+
+		public const string ADDEDCODE_MAIN_VERT_SHADER_CODE =
+@$"
+#version 450
+{VERTDATA}
+{VERTADDEDCODE}
 ";
 		public const string ADDEDCODE_SHADOW_FRAG_SHADER_CODE =
 @"
 #version 450
+
+layout(location = 0) in vec4 In_Color;
+layout(location = 1) in vec3 In_Tangent;
+layout(location = 2) in vec3 In_Normal;
+layout(location = 3) in vec2 In_UV1;
+layout(location = 4) in vec2 In_UV2;
+layout(location = 5) in vec2 In_UV3;
+layout(location = 6) in vec2 In_UV4;
+
 layout(location = 0) out vec4 Out_Shadow;
 
 ";
 		public const string ADDEDCODE_SHADOW_VERT_SHADER_CODE =
-@"
+@$"
 #version 450
+{VERTDATA}
+{VERTADDEDCODE}
 
-layout(location = 0) in vec3 In_Position;
 
 ";
 
@@ -49,18 +117,17 @@ layout(location = 0) in vec3 In_Position;
 @"
 void main()
 {
-    Out_AlbdoSpec = In_Color;
-    Out_Normals = In_Color;
-    Out_Positions = In_Color;
-    Out_Color = In_Color;
+    Out_Albdo = In_Color;
+	Out_Normals_Roughness =  vec4(normalize(In_Normal),1);
+	//Out_Positions_UserData = vec4(gl_FragCoord.xyz,0);
 }
 ";
 		public const string MAIN_VERT_SHADER_CODE =
 @"
 void main()
 {
-    gl_Position = vec4(In_Position, 1);
-	Out_Color = vec4(1);
+	PassThrough();
+    gl_Position = GetVertexPos();
 }
 ";
 		public const string SHADOW_FRAG_SHADER_CODE =
@@ -74,7 +141,8 @@ void main()
 @"
 void main()
 {
-    gl_Position = vec4(In_Position, 1);
+    PassThrough();
+    gl_Position = GetVertexPos();
 }
 ";
 	}
@@ -129,29 +197,81 @@ void main()
 				Encoding.UTF8.GetBytes(ShadowFragShaderCode),
 				"main");
 			ShadowShaders = Renderer.MainGraphicsDevice.ResourceFactory.CreateFromSpirv(mainVertexShaderDesc, mainFragmentShaderDesc);
-
-			for (var i = 0; i < rhuRawShaderData.shaderUniforms.Length; i++) {
-				var uniform = rhuRawShaderData.shaderUniforms[i];
-			
+			shaderUniforms = rhuRawShaderData.shaderUniforms;
+			var mainResourceLayoutElementDescriptions = new List<ResourceLayoutElementDescription> {
+				new ResourceLayoutElementDescription("",ResourceKind.UniformBuffer,ShaderStages.Vertex)
+			};
+			var shadowResourceLayoutElementDescriptions = new List<ResourceLayoutElementDescription>();
+			foreach (var item in shaderUniforms) {
+				var shadowPass = ShaderStages.None;
+				var mainPass = ShaderStages.None;
+				if (rhuRawShaderData.ShadowFragShaderCode?.Contains(item.FieldName)??false) {
+					shadowPass |= ShaderStages.Fragment;
+				}
+				if (rhuRawShaderData.ShadowVertShaderCode?.Contains(item.FieldName)??false) {
+					shadowPass |= ShaderStages.Vertex;
+				}
+				if (rhuRawShaderData.MainFragShaderCode?.Contains(item.FieldName) ?? false) {
+					mainPass |= ShaderStages.Fragment;
+				}
+				if (rhuRawShaderData.MainVertShaderCode?.Contains(item.FieldName) ?? false) {
+					mainPass |= ShaderStages.Vertex;
+				}
+				if (shadowPass == ShaderStages.None && mainPass == ShaderStages.None) {
+					Console.WriteLine($"Uniform {item.FieldName} Name:{item.Name} Type:{item.Type} Is never used in shaderCode");
+					return;
+				}
+				if (item.Type is UniformType.Texture1D or UniformType.Texture2D or UniformType.Texture3D) {
+					if (shadowPass != ShaderStages.None) {
+						shadowResourceLayoutElementDescriptions.Add(new ResourceLayoutElementDescription(item.FieldName, ResourceKind.TextureReadOnly, shadowPass));
+						shadowResourceLayoutElementDescriptions.Add(new ResourceLayoutElementDescription(item.FieldName + "_Sampler", ResourceKind.TextureReadOnly, shadowPass));
+					}
+					if (mainPass != ShaderStages.None) {
+						mainResourceLayoutElementDescriptions.Add(new ResourceLayoutElementDescription(item.FieldName, ResourceKind.TextureReadOnly, mainPass));
+						mainResourceLayoutElementDescriptions.Add(new ResourceLayoutElementDescription(item.FieldName + "_Sampler", ResourceKind.TextureReadOnly, mainPass));
+					}
+				}
+				else {
+					if (shadowPass != ShaderStages.None) {
+						shadowResourceLayoutElementDescriptions.Add(new ResourceLayoutElementDescription(item.FieldName, ResourceKind.UniformBuffer, shadowPass));
+					}
+					if (mainPass != ShaderStages.None) {
+						mainResourceLayoutElementDescriptions.Add(new ResourceLayoutElementDescription(item.FieldName, ResourceKind.UniformBuffer, mainPass));
+					}
+				}
 			}
+			MainResourceLayout = Renderer.MainGraphicsDevice.ResourceFactory.CreateResourceLayout(new ResourceLayoutDescription(mainResourceLayoutElementDescriptions.ToArray()));
+			ShadowResourceLayout = Renderer.MainGraphicsDevice.ResourceFactory.CreateResourceLayout(new ResourceLayoutDescription(shadowResourceLayoutElementDescriptions.ToArray()));
+			DefferedKey = rhuRawShaderData.DeferedKey;
 			LoadedShader = true;
 		}
+		public ResourceLayout ShadowResourceLayout { get; private set; }
+
+		public ResourceLayout MainResourceLayout { get; private set; }
+
+		public ShaderUniform[] shaderUniforms;
 
 		public Renderer Renderer { get; }
+		public string DefferedKey { get; private set; }
 
 		public void Dispose() {
+			LoadedShader = false;
 			if (MainShaders is not null) {
 				foreach (var item in MainShaders) {
 					item.Dispose();
 				}
 			}
 			MainShaders = null;
+			MainResourceLayout?.Dispose();
+			MainResourceLayout = null;
 			if (ShadowShaders is not null) {
 				foreach (var item in ShadowShaders) {
 					item.Dispose();
 				}
 			}
 			ShadowShaders = null;
+			ShadowResourceLayout?.Dispose();
+			ShadowResourceLayout = null;
 		}
 	}
 }

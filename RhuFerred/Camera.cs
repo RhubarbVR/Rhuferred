@@ -11,9 +11,16 @@ namespace RhuFerred
 	{
 		public RgbaFloat ClearColor = RgbaFloat.CornflowerBlue;
 
-		public Matrix4x4 WorldPos;
+		private Matrix4x4 _worldPoseInv;
 
-		public Matrix4x4 Perspective;
+		public Matrix4x4 WorldPoseInv => _worldPoseInv;
+
+		public Matrix4x4 WorldPos
+		{
+			set => Matrix4x4.Invert(value, out _worldPoseInv);
+		}
+
+		public Matrix4x4 Projection;
 
 		public Gbuffer gbuffer;
 		public uint Width { get; private set; }
@@ -29,6 +36,20 @@ namespace RhuFerred
 			NearClip = newNearClip;
 			UpdatePerspective();
 		}
+
+		public RhuTexture GetGBufferTexture(GBufferTextures index) {
+			return index switch {
+				GBufferTextures.Albdo => gbuffer.Albdo,
+				GBufferTextures.Specular_Metallic => gbuffer.Specular_Metallic,
+				GBufferTextures.Emission_AmbientOcclusion => gbuffer.Emission_AmbientOcclusion,
+				GBufferTextures.Normals_Roughness => gbuffer.Normals_Roughness,
+				GBufferTextures.SubSurfaces_DecalStencil => gbuffer.SubSurfaces_DecalStencil,
+				GBufferTextures.Positions_UserData => gbuffer.Positions_UserData,
+				GBufferTextures.Depth => gbuffer.Depth,
+				_ => MainTexture,
+			};
+		}
+
 		public float NearClip { get; private set; } = 0.01f;
 		public void SetNearClip(float newNearClip = 0.01f) {
 			NearClip = newNearClip;
@@ -62,8 +83,9 @@ namespace RhuFerred
 			renderer.Cameras.Add(this);
 			Initialize();
 		}
+		
 
-		private void Initialize() {
+		private unsafe void Initialize() {
 			gbuffer = new Gbuffer(Renderer);
 			gbuffer.BuildFrameBuffer(Width, Height);
 			WorldPos = Matrix4x4.CreateScale(1f);
@@ -73,7 +95,7 @@ namespace RhuFerred
 		}
 
 		private void UpdatePerspective() {
-			Perspective = Matrix4x4.CreatePerspective(MathF.PI / 180 * Fov, (float)Width / (float)Height, NearClip, FarClip);
+			Projection = Matrix4x4.CreatePerspective(MathF.PI / 180 * Fov, (float)Width / (float)Height, NearClip, FarClip);
 			Renderer.Logger.Info($"Perspective Update On Camera Fov:{Fov} Width:{Width} Hight:{Height} NearClip:{NearClip} FarClip:{FarClip}");
 		}
 
@@ -92,9 +114,12 @@ namespace RhuFerred
 			_commandList.SetFramebuffer(MainFramebuffer);
 			_commandList.ClearColorTarget(0, ClearColor);
 		}
-
+		
 		private void RunMainRenderPass() {
-
+			Renderer.RenderedMeshes.ForEach((item) => {
+				
+				item.Render(_commandList,this);
+			});
 		}
 
 		public void Destroy() {
@@ -113,25 +138,20 @@ namespace RhuFerred
 
 		public Renderer Renderer { get; }
 		
-		public Texture MainTexture { get; private set; }
+		public RhuTexture MainTexture { get; private set; }
 
 		public Framebuffer MainFramebuffer { get; private set; }
 
 		private void ReBuildMainFrameBuffer() {
 			ReloadFinalTexture();
 			MainFramebuffer?.Dispose();
-			MainFramebuffer = Renderer.MainGraphicsDevice.ResourceFactory.CreateFramebuffer(new FramebufferDescription(null, MainTexture));
+			MainFramebuffer = Renderer.MainGraphicsDevice.ResourceFactory.CreateFramebuffer(new FramebufferDescription(null, MainTexture.LoadedTexture));
 		}
 
 		private void ReloadFinalTexture() {
-			MainTexture?.Dispose();
-			MainTexture = null;
 			var texture = Renderer.MainGraphicsDevice.ResourceFactory.CreateTexture(TextureDescription.Texture2D(Width, Height, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget | TextureUsage.Sampled));
-			MainTexture = texture;
-			FinalTextureChange?.Invoke(texture);
+			MainTexture?.ReloadTexture(texture);
+			MainTexture ??= new RhuTexture(texture);
 		}
-
-		public event Action<Texture> FinalTextureChange;
-
 	}
 }

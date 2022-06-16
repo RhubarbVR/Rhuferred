@@ -5,22 +5,27 @@ using Veldrid.StartupUtilities;
 using Veldrid.Sdl2;
 using System.Diagnostics;
 using System.Collections.Generic;
+using Veldrid.ImageSharp;
+using System.Numerics;
 
 namespace RhuFerred
 {
 	public class Renderer : IDisposable
 	{
+		private readonly bool _debuging;
+
 		public RhuWindow FirstWindow => Windows.Count == 0 ? null : Windows[0];
 
-		public GraphicsDeviceOptions GraphicsDeviceOptions => new(false, null, false, ResourceBindingModel.Improved, true, true, true);
+		public GraphicsDeviceOptions GraphicsDeviceOptions => new(_debuging, null, false, ResourceBindingModel.Improved, true, true, true);
 
 		public GraphicsBackend? PreferredGraphicsBackend { get; private set; }
 		public readonly SafeHashSet<Camera> Cameras = new();
 		public readonly SafeHashSet<RenderedMesh> RenderedMeshes = new();
 		public readonly SafeHashSet<Light> Lights = new();
-		
+
 		public ILogger Logger { get; private set; }
-		public Renderer(GraphicsBackend? preferredGraphicsBackend = null, ILogger logger = null) {
+		public Renderer(bool debug, GraphicsBackend? preferredGraphicsBackend = null, ILogger logger = null) {
+			_debuging = debug;
 			PreferredGraphicsBackend = preferredGraphicsBackend;
 			Logger = logger ?? new BasicLogger();
 		}
@@ -36,7 +41,7 @@ namespace RhuFerred
 			return window;
 		}
 
-		public Camera CreateCamera(uint width = 960,uint height = 540) {
+		public Camera CreateCamera(uint width = 960, uint height = 540) {
 			return new Camera(this, width, height);
 		}
 
@@ -118,6 +123,7 @@ namespace RhuFerred
 
 		public RhuShader BankShader { get; private set; }
 		public RhuShader MainShader { get; private set; }
+		public Texture NullTexture { get; private set; }
 
 		public RhuShader LoadShader(string RhubarbShaderCode) {
 			return LoadShader(RhuShaderParser.ParseShaderCode(RhubarbShaderCode));
@@ -129,10 +135,80 @@ namespace RhuFerred
 		public RhuMaterial NewMaterial(RhuShader shader) {
 			return new RhuMaterial(this, shader);
 		}
+
+		public RhuMesh NewMesh(uint[] indexes, VertexInfo[] vertexInfos) {
+			var vw = new RhuMesh(this);
+			vw.LoadMainMesh(indexes, vertexInfos);
+			return vw;
+		}
+
+		public RhuMesh LoadCube(float halfSize = 0.5f) {
+			var verts = new VertexInfo[] {
+				        //Top
+				new VertexInfo(new Vector3(-halfSize,halfSize,-halfSize)),
+				new VertexInfo(new Vector3(halfSize,halfSize,-halfSize)),
+				new VertexInfo(new Vector3(-halfSize,halfSize,halfSize)),
+				new VertexInfo(new Vector3(halfSize,halfSize,halfSize)),
+				        //Bottom
+				new VertexInfo(new Vector3(-halfSize,-halfSize,-halfSize)),
+				new VertexInfo(new Vector3(halfSize,-halfSize,-halfSize)),
+				new VertexInfo(new Vector3(-halfSize,-halfSize,halfSize)),
+				new VertexInfo(new Vector3(halfSize,-halfSize,halfSize)),
+				        //Front
+				new VertexInfo(new Vector3(-halfSize,halfSize,halfSize)),
+				new VertexInfo(new Vector3(halfSize,halfSize,halfSize)),
+				new VertexInfo(new Vector3(-halfSize,-halfSize,-halfSize)),
+				new VertexInfo(new Vector3(halfSize,-halfSize,-halfSize)),
+				        //Back
+				new VertexInfo(new Vector3(-halfSize,halfSize,-halfSize)),
+				new VertexInfo(new Vector3(halfSize,halfSize,-halfSize)),
+				new VertexInfo(new Vector3(-halfSize,halfSize,halfSize)),
+				new VertexInfo(new Vector3(halfSize,halfSize,halfSize)),
+				        //Left
+				new VertexInfo(new Vector3(-halfSize,halfSize,halfSize)),
+				new VertexInfo(new Vector3(-halfSize,halfSize,-halfSize)),
+				new VertexInfo(new Vector3(-halfSize,-halfSize,-halfSize)),
+				new VertexInfo(new Vector3(halfSize,-halfSize,-halfSize)),
+				        //Right
+				new VertexInfo(new Vector3(halfSize,halfSize,halfSize)),
+				new VertexInfo(new Vector3(halfSize,halfSize,-halfSize)),
+				new VertexInfo(new Vector3(halfSize,-halfSize,halfSize)),
+				new VertexInfo(new Vector3(halfSize,-halfSize,-halfSize)),
+			};
+			var indes = new uint[] {
+				//Top
+				0, 1, 2,
+				2, 3, 1,
+
+				//Bottom
+				4, 5, 6,
+				6, 7, 5,
+
+				//Front
+				8, 9, 10,
+				10, 11, 9,
+
+				//Back
+				12, 13, 14,
+				14, 15, 13,
+
+				//Left
+				16, 17, 18,
+				18, 19, 17,
+
+				//Right
+				20, 21, 22,
+				22, 23, 21
+			};
+			return NewMesh(indes, verts);
+		}
 		private void Init() {
 			Logger.Info($"DeviceName:{MainGraphicsDevice.DeviceName} Backend:{MainGraphicsDevice.BackendType} ApiVersion:{MainGraphicsDevice.ApiVersion}");
 			BankShader = LoadShader(ShaderCode.BLANKSHADER);
 			MainShader = LoadShader(ShaderCode.MAINSHADER);
+			var tmemp = new ImageSharpTexture(ImageSharpExtensions.CreateTextureColor(2, 2, RgbaFloat.Pink), false);
+			NullTexture = tmemp.CreateDeviceTexture(MainGraphicsDevice, MainGraphicsDevice.ResourceFactory);
+			tmemp.Images[0].Dispose();
 		}
 
 		public void Dispose() {
