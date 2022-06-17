@@ -19,9 +19,20 @@ namespace RhuFerred
 	public class Gbuffer : IDisposable
 	{
 		public void ClearColors(CommandList commandList) {
+			////Debug
+			//commandList.ClearColorTarget(0, RgbaFloat.Black);
+			//commandList.ClearColorTarget(1, RgbaFloat.Green);
+			//commandList.ClearColorTarget(2, RgbaFloat.Cyan);
+			//commandList.ClearColorTarget(3, RgbaFloat.DarkRed);
+			//commandList.ClearColorTarget(4, RgbaFloat.Pink);
+			//commandList.ClearColorTarget(5, RgbaFloat.Orange);
+
 			commandList.ClearColorTarget(0, RgbaFloat.Black);
 			commandList.ClearColorTarget(1, RgbaFloat.Black);
 			commandList.ClearColorTarget(2, RgbaFloat.Black);
+			commandList.ClearColorTarget(3, RgbaFloat.Black);
+			commandList.ClearColorTarget(4, RgbaFloat.Black);
+			commandList.ClearColorTarget(5, RgbaFloat.Black);
 		}
 
 		public Gbuffer(Renderer renderer) {

@@ -9,9 +9,10 @@ namespace Tester
 	{
 		static void Main(string[] args) {
 			Console.WriteLine("Starting Render Tester!");
-			var render = new Renderer(true);
+			var render = new Renderer(false,GraphicsBackend.OpenGL);
 			render.Init(render.CreateNewWindow("Main Cam"));
 			var maincam = render.CreateCamera();
+			maincam.WorldPos = Matrix4x4.CreateScale(1);
 			render.FirstWindow.TargetCamera(maincam);
 			render.FirstWindow.Sdl2Window.KeyDown += (KeyEvente) => {
 				if (KeyEvente.Key == Key.F1) {
@@ -33,15 +34,29 @@ namespace Tester
 					Console.WriteLine($"Changed window Texture to {index}");
 				}
 			};
-			var testMesh = render.LoadCube();
-			var meshRender = render.AttachMeshRender(testMesh, render.NewMaterial(render.BankShader));
-			static Matrix4x4 GetMatrix(float scale, Quaternion rot, float x, float y, float z) {
-				return Matrix4x4.CreateScale(scale) * Matrix4x4.CreateFromQuaternion(rot) * Matrix4x4.CreateTranslation(x, y, z);
-			}
+			var testMesh = render.LoadCube(0.3f);
+			var mit = render.NewMaterial(render.BankShader);
+			var meshRender = render.AttachMeshRender(testMesh, mit);
+			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(1, 1, 1);
+			meshRender = render.AttachMeshRender(testMesh, mit);
+			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(1, 1, -1);
+			meshRender = render.AttachMeshRender(testMesh, mit);
+			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(1, -1, -1);
+			meshRender = render.AttachMeshRender(testMesh, mit);
+			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(-1, -1, -1);
+			meshRender = render.AttachMeshRender(testMesh, mit);
+			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(-1, 1, 1);
+			meshRender = render.AttachMeshRender(testMesh, mit);
+			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(1, -1, 1);
+			meshRender = render.AttachMeshRender(testMesh, mit);
+			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(0, 0, 0);
+			meshRender = render.AttachMeshRender(testMesh, mit);
+			meshRender.WorldPos = Matrix4x4.CreateScale(1000) * Matrix4x4.CreateTranslation(0, 0, 0);
+			meshRender = render.AttachMeshRender(testMesh, mit);
+			meshRender.WorldPos = Matrix4x4.CreateScale(-1000) * Matrix4x4.CreateTranslation(0, 0, 0);
 			var speen = 0.0;
 			while (render.Step(() => {
 				speen += render.DeltaTime;
-				meshRender.WorldPos = GetMatrix(1, Quaternion.Identity, 0, 0, 3) * GetMatrix(1, Quaternion.CreateFromYawPitchRoll((float)(speen / 10), 0, (float)(speen / 20)), 0, 0, 0);
 			})) { };
 			render.Dispose();
 		}

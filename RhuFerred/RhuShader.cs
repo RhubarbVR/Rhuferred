@@ -64,9 +64,7 @@ layout(location = 6) out vec2 Out_UV4;
 layout(location = 7) out flat uint Out_MaterialIndex;
 
 vec4 GetVertexPos() {
-	vec4 worldPosition = World * vec4(Position, 1);
-    vec4 viewPosition = View * worldPosition;
-    return Projection * viewPosition;
+    return Projection * View * World * vec4(Position, 1);
 }
 
 void PassThrough() {
@@ -119,7 +117,10 @@ void main()
 {
     Out_Albdo = In_Color;
 	Out_Normals_Roughness =  vec4(normalize(In_Normal),1);
-	//Out_Positions_UserData = vec4(gl_FragCoord.xyz,0);
+	Out_Positions_UserData = vec4(gl_FragCoord.xyz,0);
+	Out_Specular_Metallic  = vec4(0.2);
+	Out_Emission_AmbientOcclusion = vec4(0.3);
+	Out_SubSurfaces_DecalStencil = vec4(0.5);
 }
 ";
 		public const string MAIN_VERT_SHADER_CODE =

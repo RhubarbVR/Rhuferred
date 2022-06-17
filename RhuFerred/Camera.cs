@@ -11,13 +11,13 @@ namespace RhuFerred
 	{
 		public RgbaFloat ClearColor = RgbaFloat.CornflowerBlue;
 
-		private Matrix4x4 _worldPoseInv;
+		private Matrix4x4 _view;
 
-		public Matrix4x4 WorldPoseInv => _worldPoseInv;
+		public Matrix4x4 View => _view;
 
 		public Matrix4x4 WorldPos
 		{
-			set => Matrix4x4.Invert(value, out _worldPoseInv);
+			set => Matrix4x4.Invert(value, out _view);
 		}
 
 		public Matrix4x4 Projection;
@@ -108,6 +108,7 @@ namespace RhuFerred
 			ProcesssFinal();
 			_commandList.End();
 			Renderer.MainGraphicsDevice.SubmitCommands(_commandList);
+			Renderer.MainGraphicsDevice.WaitForIdle();
 		}
 
 		private void ProcesssFinal() {

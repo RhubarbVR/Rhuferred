@@ -6,7 +6,6 @@ using System.Text;
 
 using Veldrid;
 
-using Vortice.Mathematics;
 
 namespace RhuFerred.MaterialUniforms
 {

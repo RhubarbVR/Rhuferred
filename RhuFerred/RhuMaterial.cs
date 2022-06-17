@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 using RhuFerred.MaterialUniforms;
@@ -88,79 +89,47 @@ namespace RhuFerred
 			var vertexLayouts = new VertexLayoutDescription[]
 			{
 				new VertexLayoutDescription(
-					new VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float3),
-					new VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4),
-					new VertexElementDescription("Tangent", VertexElementSemantic.Normal, VertexElementFormat.Float3),
-					new VertexElementDescription("Normal", VertexElementSemantic.Normal, VertexElementFormat.Float3),
+					new VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3),
+					new VertexElementDescription("Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4),
+					new VertexElementDescription("Tangent", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3),
+					new VertexElementDescription("Normal", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3),
 					new VertexElementDescription("UV1", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
 					new VertexElementDescription("UV2", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
 					new VertexElementDescription("UV3", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
 					new VertexElementDescription("UV4", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
-					new VertexElementDescription("Bones", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Int4)
+					new VertexElementDescription("Bones", VertexElementSemantic.TextureCoordinate, VertexElementFormat.UInt4)
 				),
 			};
 			var outputDesciption = new OutputDescription {
 				ColorAttachments = new OutputAttachmentDescription[] {
-						new OutputAttachmentDescription(PixelFormat.R16_G16_B16_A16_Float),// Albdo:4
-						new OutputAttachmentDescription(PixelFormat.R16_G16_B16_A16_Float),// Specular:3 Metallic:1
-						new OutputAttachmentDescription(PixelFormat.R16_G16_B16_A16_Float),// Emission:3 Ambient Occlusion:1 
-						new OutputAttachmentDescription(PixelFormat.R16_G16_B16_A16_Float),// Normals:3  Roughness:1
-						new OutputAttachmentDescription(PixelFormat.R16_G16_B16_A16_Float),// SubSurfaces:3 DecalStencil : 1
-						new OutputAttachmentDescription(PixelFormat.R16_G16_B16_A16_Float),// Position: 3 UserData: 1
+						new OutputAttachmentDescription(PixelFormat.R32_G32_B32_A32_Float),// Albdo:4
+						new OutputAttachmentDescription(PixelFormat.R32_G32_B32_A32_Float),// Specular:3 Metallic:1
+						new OutputAttachmentDescription(PixelFormat.R32_G32_B32_A32_Float),// Emission:3 Ambient Occlusion:1 
+						new OutputAttachmentDescription(PixelFormat.R32_G32_B32_A32_Float),// Normals:3  Roughness:1
+						new OutputAttachmentDescription(PixelFormat.R32_G32_B32_A32_Float),// SubSurfaces:3 DecalStencil : 1
+						new OutputAttachmentDescription(PixelFormat.R32_G32_B32_A32_Float),// Position: 3 UserData: 1
 					},
 				DepthAttachment = new OutputAttachmentDescription {
 					Format = PixelFormat.R32_Float
-				}
+				},				
 			};
 
-			var mainShaderDisciption = new ShaderSetDescription(vertexLayouts, RhuShader.MainShaders,
-				new[] { new SpecializationConstant(100, Renderer.MainGraphicsDevice.IsClipSpaceYInverted) });
-
-			var mainResorces = new ResourceLayout[] {
-				GetProjViewWorldLayout(Renderer.MainGraphicsDevice.ResourceFactory),
-				RhuShader.MainResourceLayout,
-			};
+			var resourceLayout = GetProjViewWorldLayout(Renderer.MainGraphicsDevice.ResourceFactory);
 			var mainDescription = new GraphicsPipelineDescription(
 				BlendStateDescription.Empty,
 				Renderer.MainGraphicsDevice.IsDepthRangeZeroToOne ? DepthStencilStateDescription.DepthOnlyGreaterEqual : DepthStencilStateDescription.DepthOnlyLessEqual,
-				RasterizerStateDescription.Default,
+				RasterizerStateDescription.CullNone,
 				PrimitiveTopology.TriangleList,
-				mainShaderDisciption,
-				mainResorces,
+				new ShaderSetDescription(vertexLayouts, RhuShader.MainShaders, new[] { new SpecializationConstant(100, Renderer.MainGraphicsDevice.IsClipSpaceYInverted) }),
+				resourceLayout,
 				outputDesciption
 			);
-			var mainBoundResources = new List<BindableResource>
-			{
-				_wvpBuffer,
-			};
-
-			var mainResourceSetDescription = new ResourceSetDescription {
-				Layout = mainResorces[0],
-				BoundResources = mainBoundResources.ToArray()
-			};
-			MainResourceSet = Renderer.MainGraphicsDevice.ResourceFactory.CreateResourceSet(mainResourceSetDescription);
-
+			
 			MainPipeline = Renderer.MainGraphicsDevice.ResourceFactory.CreateGraphicsPipeline(mainDescription);
 
+			MainResourceSet = Renderer.MainGraphicsDevice.ResourceFactory.CreateResourceSet(new ResourceSetDescription(
+				GetProjViewWorldLayout(Renderer.MainGraphicsDevice.ResourceFactory),_wvpBuffer));
 
-			var shadowShaderDisciption = new ShaderSetDescription(vertexLayouts, RhuShader.ShadowShaders,
-				new[] { new SpecializationConstant(100, Renderer.MainGraphicsDevice.IsClipSpaceYInverted) });
-
-			var shadowResorces = new ResourceLayout[] {
-				GetProjViewWorldLayout(Renderer.MainGraphicsDevice.ResourceFactory),
-				RhuShader.ShadowResourceLayout,
-			};
-			var shadowDescription = new GraphicsPipelineDescription(
-				BlendStateDescription.Empty,
-				Renderer.MainGraphicsDevice.IsDepthRangeZeroToOne ? DepthStencilStateDescription.DepthOnlyGreaterEqual : DepthStencilStateDescription.DepthOnlyLessEqual,
-				RasterizerStateDescription.Default,
-				PrimitiveTopology.TriangleList,
-				mainShaderDisciption,
-				mainResorces,
-				outputDesciption
-			);
-
-			ShadowPipeline = Renderer.MainGraphicsDevice.ResourceFactory.CreateGraphicsPipeline(shadowDescription);
 			MitLoaded = true;
 			Console.WriteLine("Loaded PipeLines");
 		}
@@ -169,6 +138,7 @@ namespace RhuFerred
 		public MaterialUniform GetUniform(string key) {
 			return _uniforms[key];
 		}
+		[StructLayout(LayoutKind.Sequential)]
 		public struct WorldData
 		{
 			public Matrix4x4 Projection;
@@ -180,7 +150,7 @@ namespace RhuFerred
 			_commandList.UpdateBuffer(_wvpBuffer, 0, new WorldData {
 				World = WorldPos,
 				MaterialIndex = mitindex,
-				View = camera.WorldPoseInv,
+				View = camera.View,
 				Projection = camera.Projection
 			});
 		}
