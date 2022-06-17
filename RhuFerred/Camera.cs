@@ -17,7 +17,7 @@ namespace RhuFerred
 
 		public Matrix4x4 WorldPos
 		{
-			set => Matrix4x4.Invert(value, out _view);
+			set => _view = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
 		}
 
 		public Matrix4x4 Projection;
@@ -95,7 +95,7 @@ namespace RhuFerred
 		}
 
 		private void UpdatePerspective() {
-			Projection = Matrix4x4.CreatePerspective(MathF.PI / 180 * Fov, (float)Width / (float)Height, NearClip, FarClip);
+			Projection = Matrix4x4.CreatePerspectiveFieldOfView(MathF.PI / 180 * Fov, (float)Width / (float)Height, NearClip, FarClip);
 			Renderer.Logger.Info($"Perspective Update On Camera Fov:{Fov} Width:{Width} Hight:{Height} NearClip:{NearClip} FarClip:{FarClip}");
 		}
 
@@ -117,10 +117,7 @@ namespace RhuFerred
 		}
 		
 		private void RunMainRenderPass() {
-			Renderer.RenderedMeshes.ForEach((item) => {
-				
-				item.Render(_commandList,this);
-			});
+			Renderer.RenderedMeshes.ForEach((item) => item.Render(_commandList, this));
 		}
 
 		public void Destroy() {

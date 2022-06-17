@@ -91,7 +91,7 @@ namespace RhuFerred
 					commandList.SetIndexBuffer(Mesh.IndexBuffer, IndexFormat.UInt32);
 					commandList.SetPipeline(item.MainPipeline);
 					commandList.SetGraphicsResourceSet(0, item.MainResourceSet);
-					commandList.DrawIndexed((uint)Mesh.Indexes.Length);
+					commandList.DrawIndexed((uint)Mesh.Indexes.Length,1,0,0,0);
 				}
 			}
 		}

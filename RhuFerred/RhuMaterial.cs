@@ -117,7 +117,7 @@ namespace RhuFerred
 			var resourceLayout = GetProjViewWorldLayout(Renderer.MainGraphicsDevice.ResourceFactory);
 			var mainDescription = new GraphicsPipelineDescription(
 				BlendStateDescription.Empty,
-				Renderer.MainGraphicsDevice.IsDepthRangeZeroToOne ? DepthStencilStateDescription.DepthOnlyGreaterEqual : DepthStencilStateDescription.DepthOnlyLessEqual,
+				DepthStencilStateDescription.Disabled,//Renderer.MainGraphicsDevice.IsDepthRangeZeroToOne ? DepthStencilStateDescription.DepthOnlyGreaterEqual : DepthStencilStateDescription.DepthOnlyLessEqual,
 				RasterizerStateDescription.CullNone,
 				PrimitiveTopology.TriangleList,
 				new ShaderSetDescription(vertexLayouts, RhuShader.MainShaders, new[] { new SpecializationConstant(100, Renderer.MainGraphicsDevice.IsClipSpaceYInverted) }),

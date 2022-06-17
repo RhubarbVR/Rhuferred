@@ -9,7 +9,7 @@ namespace Tester
 	{
 		static void Main(string[] args) {
 			Console.WriteLine("Starting Render Tester!");
-			var render = new Renderer(false,GraphicsBackend.OpenGL);
+			var render = new Renderer(true);
 			render.Init(render.CreateNewWindow("Main Cam"));
 			var maincam = render.CreateCamera();
 			maincam.WorldPos = Matrix4x4.CreateScale(1);
@@ -34,10 +34,10 @@ namespace Tester
 					Console.WriteLine($"Changed window Texture to {index}");
 				}
 			};
-			var testMesh = render.LoadCube(0.3f);
+			var testMesh = render.LoadCube(0.25f);
 			var mit = render.NewMaterial(render.BankShader);
 			var meshRender = render.AttachMeshRender(testMesh, mit);
-			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(1, 1, 1);
+			meshRender.WorldPos = Matrix4x4.CreateTranslation(1, 1, 1);
 			meshRender = render.AttachMeshRender(testMesh, mit);
 			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(1, 1, -1);
 			meshRender = render.AttachMeshRender(testMesh, mit);
@@ -55,9 +55,7 @@ namespace Tester
 			meshRender = render.AttachMeshRender(testMesh, mit);
 			meshRender.WorldPos = Matrix4x4.CreateScale(-1000) * Matrix4x4.CreateTranslation(0, 0, 0);
 			var speen = 0.0;
-			while (render.Step(() => {
-				speen += render.DeltaTime;
-			})) { };
+			while (render.Step(() => speen += render.DeltaTime)) { };
 			render.Dispose();
 		}
 	}

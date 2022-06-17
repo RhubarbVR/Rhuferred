@@ -117,10 +117,10 @@ void main()
 {
     Out_Albdo = In_Color;
 	Out_Normals_Roughness =  vec4(normalize(In_Normal),1);
-	Out_Positions_UserData = vec4(gl_FragCoord.xyz,0);
-	Out_Specular_Metallic  = vec4(0.2);
-	Out_Emission_AmbientOcclusion = vec4(0.3);
-	Out_SubSurfaces_DecalStencil = vec4(0.5);
+	Out_Positions_UserData = vec4(gl_FragCoord.xyz,1);
+	Out_Specular_Metallic  = vec4(0.2,0.1,1,1);
+	Out_Emission_AmbientOcclusion = vec4(0.3,0.1,1,1);
+	Out_SubSurfaces_DecalStencil = vec4(0.5,0.1,1,1);
 }
 ";
 		public const string MAIN_VERT_SHADER_CODE =
