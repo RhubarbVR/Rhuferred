@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
 
+using Newtonsoft.Json.Linq;
+
 using Veldrid;
 
 namespace RhuFerred
@@ -11,13 +13,16 @@ namespace RhuFerred
 	{
 		public RgbaFloat ClearColor = RgbaFloat.CornflowerBlue;
 
-		private Matrix4x4 _view;
-
-		public Matrix4x4 View => _view;
+		public Matrix4x4 View;
 
 		public Matrix4x4 WorldPos
 		{
-			set => _view = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
+			get {
+				Matrix4x4.Invert(View, out var vakue);
+				return vakue;
+			}
+			set =>
+				Matrix4x4.Invert(value, out View);
 		}
 
 		public Matrix4x4 Projection;
@@ -66,10 +71,10 @@ namespace RhuFerred
 			UpdatePerspective();
 		}
 
-		public void Resize(uint width,uint height) {
+		public void Resize(uint width, uint height) {
 			Width = width;
 			Height = height;
-			gbuffer.Resize(width,height);
+			gbuffer.Resize(width, height);
 			ReBuildMainFrameBuffer();
 			UpdatePerspective();
 		}
@@ -83,7 +88,7 @@ namespace RhuFerred
 			renderer.Cameras.Add(this);
 			Initialize();
 		}
-		
+
 
 		private unsafe void Initialize() {
 			gbuffer = new Gbuffer(Renderer);
@@ -115,7 +120,7 @@ namespace RhuFerred
 			_commandList.SetFramebuffer(MainFramebuffer);
 			_commandList.ClearColorTarget(0, ClearColor);
 		}
-		
+
 		private void RunMainRenderPass() {
 			Renderer.RenderedMeshes.ForEach((item) => item.Render(_commandList, this));
 		}
@@ -135,7 +140,7 @@ namespace RhuFerred
 		}
 
 		public Renderer Renderer { get; }
-		
+
 		public RhuTexture MainTexture { get; private set; }
 
 		public Framebuffer MainFramebuffer { get; private set; }

@@ -86,12 +86,12 @@ namespace RhuFerred
 			for (var i = 0; i < _rhuMaterials.Count; i++) {
 				var item = _rhuMaterials[i];
 				if (item.MitLoaded) {
-					item.UpdateUbo(commandList, camera, WorldPos, (uint)i);
+					item.UpdateUbo(commandList, camera, WorldPos);
+					commandList.SetPipeline(item.MainPipeline);
 					commandList.SetVertexBuffer(0, Mesh.VertBuffer);
 					commandList.SetIndexBuffer(Mesh.IndexBuffer, IndexFormat.UInt32);
-					commandList.SetPipeline(item.MainPipeline);
-					commandList.SetGraphicsResourceSet(0, item.MainResourceSet);
-					commandList.DrawIndexed((uint)Mesh.Indexes.Length,1,0,0,0);
+					commandList.SetGraphicsResourceSet((uint)i, item.MainResourceSet);
+					commandList.DrawIndexed((uint)Mesh.Indexes.Length);
 				}
 			}
 		}

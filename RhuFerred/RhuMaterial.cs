@@ -73,11 +73,8 @@ namespace RhuFerred
 			new ResourceLayoutElementDescription("WorldData", ResourceKind.UniformBuffer, ShaderStages.Vertex)
 		);
 
-		private static ResourceLayout _resourceLayout;
-
 		public static ResourceLayout GetProjViewWorldLayout(ResourceFactory resourceFactory) {
-			_resourceLayout ??= resourceFactory.CreateResourceLayout(ProjViewWorldLayoutDescription);
-			return _resourceLayout;
+			return resourceFactory.CreateResourceLayout(ProjViewWorldLayoutDescription);
 		}
 
 		public Pipeline MainPipeline { get; private set; }
@@ -117,7 +114,7 @@ namespace RhuFerred
 			var resourceLayout = GetProjViewWorldLayout(Renderer.MainGraphicsDevice.ResourceFactory);
 			var mainDescription = new GraphicsPipelineDescription(
 				BlendStateDescription.Empty,
-				DepthStencilStateDescription.Disabled,//Renderer.MainGraphicsDevice.IsDepthRangeZeroToOne ? DepthStencilStateDescription.DepthOnlyGreaterEqual : DepthStencilStateDescription.DepthOnlyLessEqual,
+				Renderer.MainGraphicsDevice.IsDepthRangeZeroToOne ? DepthStencilStateDescription.DepthOnlyGreaterEqual : DepthStencilStateDescription.DepthOnlyLessEqual,
 				RasterizerStateDescription.CullNone,
 				PrimitiveTopology.TriangleList,
 				new ShaderSetDescription(vertexLayouts, RhuShader.MainShaders, new[] { new SpecializationConstant(100, Renderer.MainGraphicsDevice.IsClipSpaceYInverted) }),
@@ -128,7 +125,7 @@ namespace RhuFerred
 			MainPipeline = Renderer.MainGraphicsDevice.ResourceFactory.CreateGraphicsPipeline(mainDescription);
 
 			MainResourceSet = Renderer.MainGraphicsDevice.ResourceFactory.CreateResourceSet(new ResourceSetDescription(
-				GetProjViewWorldLayout(Renderer.MainGraphicsDevice.ResourceFactory),_wvpBuffer));
+				resourceLayout, _wvpBuffer));
 
 			MitLoaded = true;
 			Console.WriteLine("Loaded PipeLines");
@@ -144,12 +141,10 @@ namespace RhuFerred
 			public Matrix4x4 Projection;
 			public Matrix4x4 View;
 			public Matrix4x4 World;
-			public uint MaterialIndex;
 		}
-		public void UpdateUbo(CommandList _commandList, Camera camera, Matrix4x4 WorldPos, uint mitindex) {
+		public void UpdateUbo(CommandList _commandList, Camera camera, Matrix4x4 WorldPos) {
 			_commandList.UpdateBuffer(_wvpBuffer, 0, new WorldData {
 				World = WorldPos,
-				MaterialIndex = mitindex,
 				View = camera.View,
 				Projection = camera.Projection
 			});
@@ -164,12 +159,12 @@ namespace RhuFerred
 
 		public unsafe RhuMaterial(Renderer renderer) {
 			Renderer = renderer;
-			_wvpBuffer = Renderer.MainGraphicsDevice.ResourceFactory.CreateBuffer(new BufferDescription(1568, BufferUsage.UniformBuffer | BufferUsage.Dynamic));
+			_wvpBuffer = Renderer.MainGraphicsDevice.ResourceFactory.CreateBuffer(new BufferDescription(208, BufferUsage.UniformBuffer | BufferUsage.Dynamic));
 		}
 
 		public unsafe RhuMaterial(Renderer renderer, RhuShader targetShader) {
 			Renderer = renderer;
-			_wvpBuffer = Renderer.MainGraphicsDevice.ResourceFactory.CreateBuffer(new BufferDescription(1568, BufferUsage.UniformBuffer | BufferUsage.Dynamic));
+			_wvpBuffer = Renderer.MainGraphicsDevice.ResourceFactory.CreateBuffer(new BufferDescription(208, BufferUsage.UniformBuffer | BufferUsage.Dynamic));
 			RhuShader = targetShader;
 		}
 

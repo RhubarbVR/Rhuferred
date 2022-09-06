@@ -5,8 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 using Veldrid;
-
-using Vortice.Mathematics;
+using Veldrid.Utilities;
 
 namespace RhuFerred
 {
@@ -69,6 +68,7 @@ namespace RhuFerred
 			Verts = vertexInfos;
 			Indexes = indexes;
 			BuildBuffers();
+			UpdateBoundingBox();
 		}
 		public void UpdateBuffers() {
 			Renderer.Logger.Info("Update Mesh Buffers");
@@ -86,12 +86,12 @@ namespace RhuFerred
 		}
 
 		public void UpdateBoundingBox() {
-			BoundingBox = BoundingBox.Empty;
+			BoundingBox = new BoundingBox();
 			var poses = new Vector3[Verts.Length];
 			for (var i = 0; i < Verts.Length; i++) {
 				poses[i] = Verts[i].Position;
 			}
-			BoundingBox = BoundingBox.CreateMerged(BoundingBox.CreateFromPoints(poses), BoundingBox);
+			BoundingBox = BoundingBox.Combine(BoundingBox.CreateFromVertices(poses), BoundingBox);
 		}
 		public BoundingBox BoundingBox { get; private set; }
 

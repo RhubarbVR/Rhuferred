@@ -20,7 +20,6 @@ layout(location = 3) in vec2 In_UV1;
 layout(location = 4) in vec2 In_UV2;
 layout(location = 5) in vec2 In_UV3;
 layout(location = 6) in vec2 In_UV4;
-layout(location = 7) in flat uint In_MaterialIndex;
 
 layout(location = 0) out vec4 Out_Albdo;
 layout(location = 1) out vec4 Out_Specular_Metallic;
@@ -46,12 +45,16 @@ layout(location = 8) in ivec4 Bones;
 		public const string VERTADDEDCODE =
 @"
 
-layout(set = 0, binding = 0) uniform WorldData
+struct WorldDataMats
 {
 	mat4 Projection;
     mat4 View;
     mat4 World;
-	uint MaterialIndex;
+};
+
+layout(set = 0, binding = 0) uniform WorldData
+{
+	WorldDataMats _worldData;
 };
 
 layout(location = 0) out vec4 Out_Color;
@@ -61,10 +64,11 @@ layout(location = 3) out vec2 Out_UV1;
 layout(location = 4) out vec2 Out_UV2;
 layout(location = 5) out vec2 Out_UV3;
 layout(location = 6) out vec2 Out_UV4;
-layout(location = 7) out flat uint Out_MaterialIndex;
 
 vec4 GetVertexPos() {
-    return Projection * View * World * vec4(Position, 1);
+	vec4  pos = _worldData.World * vec4(Position, 1);
+	vec4 view = _worldData.View * pos;
+    return _worldData.Projection * view;
 }
 
 void PassThrough() {
@@ -75,7 +79,6 @@ void PassThrough() {
 	Out_UV2 = UV2;
 	Out_UV3 = UV3;
 	Out_UV4 = UV4;
-	Out_MaterialIndex = MaterialIndex;
 }
 
 ";
@@ -127,8 +130,8 @@ void main()
 @"
 void main()
 {
-	PassThrough();
     gl_Position = GetVertexPos();
+	PassThrough();
 }
 ";
 		public const string SHADOW_FRAG_SHADER_CODE =
@@ -187,7 +190,7 @@ void main()
 				Encoding.UTF8.GetBytes(MainFragShaderCode),
 				"main");
 			MainShaders = Renderer.MainGraphicsDevice.ResourceFactory.CreateFromSpirv(mainVertexShaderDesc, mainFragmentShaderDesc);
-
+			Renderer.Logger.Info($"ShaderCode MainFragShaderCode:{MainFragShaderCode}\nMainVertShaderCode:{MainVertShaderCode}\nShadowFragShaderCode:{ShadowFragShaderCode}\nShadowVertShaderCode:{ShadowVertShaderCode}\n ");
 
 			var shadowVertexShaderDesc = new ShaderDescription(
 				ShaderStages.Vertex,
@@ -199,17 +202,15 @@ void main()
 				"main");
 			ShadowShaders = Renderer.MainGraphicsDevice.ResourceFactory.CreateFromSpirv(mainVertexShaderDesc, mainFragmentShaderDesc);
 			shaderUniforms = rhuRawShaderData.shaderUniforms;
-			var mainResourceLayoutElementDescriptions = new List<ResourceLayoutElementDescription> {
-				new ResourceLayoutElementDescription("",ResourceKind.UniformBuffer,ShaderStages.Vertex)
-			};
+			var mainResourceLayoutElementDescriptions = new List<ResourceLayoutElementDescription>();
 			var shadowResourceLayoutElementDescriptions = new List<ResourceLayoutElementDescription>();
 			foreach (var item in shaderUniforms) {
 				var shadowPass = ShaderStages.None;
 				var mainPass = ShaderStages.None;
-				if (rhuRawShaderData.ShadowFragShaderCode?.Contains(item.FieldName)??false) {
+				if (rhuRawShaderData.ShadowFragShaderCode?.Contains(item.FieldName) ?? false) {
 					shadowPass |= ShaderStages.Fragment;
 				}
-				if (rhuRawShaderData.ShadowVertShaderCode?.Contains(item.FieldName)??false) {
+				if (rhuRawShaderData.ShadowVertShaderCode?.Contains(item.FieldName) ?? false) {
 					shadowPass |= ShaderStages.Vertex;
 				}
 				if (rhuRawShaderData.MainFragShaderCode?.Contains(item.FieldName) ?? false) {

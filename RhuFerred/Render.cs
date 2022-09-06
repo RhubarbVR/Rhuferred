@@ -16,7 +16,7 @@ namespace RhuFerred
 
 		public RhuWindow FirstWindow => Windows.Count == 0 ? null : Windows[0];
 
-		public GraphicsDeviceOptions GraphicsDeviceOptions => new(_debuging, null, false, ResourceBindingModel.Improved, true, true, true);
+		public GraphicsDeviceOptions GraphicsDeviceOptions => new(_debuging, null, true, ResourceBindingModel.Improved, true, true, true);
 
 		public GraphicsBackend? PreferredGraphicsBackend { get; private set; }
 		public readonly SafeHashSet<Camera> Cameras = new();
@@ -203,7 +203,7 @@ namespace RhuFerred
 			return NewMesh(indes, verts);
 		}
 		private void Init() {
-			Logger.Info($"DeviceName:{MainGraphicsDevice.DeviceName} Backend:{MainGraphicsDevice.BackendType} ApiVersion:{MainGraphicsDevice.ApiVersion}");
+			//Logger.Info($"DeviceName:{MainGraphicsDevice.DeviceName} Backend:{MainGraphicsDevice.BackendType} ApiVersion:{MainGraphicsDevice.ApiVersion}");
 			BankShader = LoadShader(ShaderCode.BLANKSHADER);
 			MainShader = LoadShader(ShaderCode.MAINSHADER);
 			var tmemp = new ImageSharpTexture(ImageSharpExtensions.CreateTextureColor(2, 2, RgbaFloat.Pink), false);

@@ -37,25 +37,10 @@ namespace Tester
 			var testMesh = render.LoadCube(0.25f);
 			var mit = render.NewMaterial(render.BankShader);
 			var meshRender = render.AttachMeshRender(testMesh, mit);
-			meshRender.WorldPos = Matrix4x4.CreateTranslation(1, 1, 1);
-			meshRender = render.AttachMeshRender(testMesh, mit);
-			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(1, 1, -1);
-			meshRender = render.AttachMeshRender(testMesh, mit);
-			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(1, -1, -1);
-			meshRender = render.AttachMeshRender(testMesh, mit);
-			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(-1, -1, -1);
-			meshRender = render.AttachMeshRender(testMesh, mit);
-			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(-1, 1, 1);
-			meshRender = render.AttachMeshRender(testMesh, mit);
-			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(1, -1, 1);
-			meshRender = render.AttachMeshRender(testMesh, mit);
-			meshRender.WorldPos = Matrix4x4.CreateScale(1) * Matrix4x4.CreateTranslation(0, 0, 0);
-			meshRender = render.AttachMeshRender(testMesh, mit);
-			meshRender.WorldPos = Matrix4x4.CreateScale(1000) * Matrix4x4.CreateTranslation(0, 0, 0);
-			meshRender = render.AttachMeshRender(testMesh, mit);
-			meshRender.WorldPos = Matrix4x4.CreateScale(-1000) * Matrix4x4.CreateTranslation(0, 0, 0);
-			var speen = 0.0;
-			while (render.Step(() => speen += render.DeltaTime)) { };
+			meshRender.WorldPos = Matrix4x4.CreateTranslation(0, 0, -1);
+			var meshRender2 = render.AttachMeshRender(testMesh, mit);
+			meshRender2.WorldPos = Matrix4x4.CreateTranslation(0, 0, 1);
+			while (render.Step()) { };
 			render.Dispose();
 		}
 	}
